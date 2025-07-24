@@ -3159,6 +3159,14 @@ $prefix = 'iro_options';
       ),
 
       array(
+        'id' => 'qq_avatar_api_key',
+        'type' => 'text',
+        'title' => __('QQ Avatar API Key','sakurairo_csf'),
+        'desc' => __('Enter your API key for QQ avatar service, get your API key at: https://api.nsmao.net','sakurairo_csf','sakurairo_csf'),
+        'default' => ''
+      ),
+
+      array(
         'id' => 'qq_avatar_link',
         'type' => 'select',
         'title' => __('QQ Avatar Link Encryption','sakurairo_csf'),
