@@ -4216,8 +4216,8 @@ iro_action_operator();
  */
 // 检查密钥是否存在，如果不存在则生成并存储
 if (!get_option('sakura_encryption_key')) {
-    // 生成一个安全的 256-bit (32字节) 密钥
-    $new_key = bin2hex(random_bytes(32)); // 或者使用 openssl_random_pseudo_bytes(32)
+    // 生成一个安全的 128-bit (16字节) 密钥，适用于 AES-128-CBC
+    $new_key = bin2hex(random_bytes(16)); // 或者使用 openssl_random_pseudo_bytes(16)
     update_option('sakura_encryption_key', $new_key, false); // 'false' 表示不自动加载
 }
 
