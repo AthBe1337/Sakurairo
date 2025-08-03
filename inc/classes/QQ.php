@@ -5,7 +5,21 @@ namespace Sakura\API;
 class QQ
 {
     public static function get_qq_info($qq) {
-        $get_info = file_get_contents('https://api.nsmao.net/api/qq/v1/query?key=' . iro_opt('qq_avatar_api_key') . '&qq=' . $qq);
+        // Validate QQ number: must be 3 or more digits
+        if (!preg_match('/^\d{3,}$/', $qq)) {
+            return array(
+                'status' => 400,
+                'success' => false,
+                'message' => 'Invalid QQ number.'
+            );
+        }
+        $api_key = iro_opt('qq_avatar_api_key');
+        $query = http_build_query([
+            'key' => $api_key,
+            'qq' => $qq
+        ]);
+        $url = 'https://api.nsmao.net/api/qq/v1/query?' . $query;
+        $get_info = file_get_contents($url);
         $name = json_decode($get_info, true);
         if ($name) {
             if ($name['code'] == 200){
