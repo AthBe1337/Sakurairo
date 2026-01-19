@@ -2423,19 +2423,17 @@ function change_avatar($avatar)
             preg_match('/:\"([^\"]*)\"/i', $qqavatar, $matches);
             return '<img src="' . $matches[1] . '" class="lazyload avatar avatar-24 photo" alt="😀" width="24" height="24" onerror="imgError(this,1)">';
         }
-        
+
         // Ensure $sakura_privkey is defined and not null
         if (isset($sakura_privkey) && !is_null($sakura_privkey)) {
-            // 生成一个合适长度的初始化向量
-            $iv_length = openssl_cipher_iv_length('aes-128-cbc');
-            $iv = openssl_random_pseudo_bytes($iv_length);
-            
+            $iv = substr(md5($sakura_privkey), 0, 16);
+
             // 加密数据
             $encrypted = openssl_encrypt($qq_number, 'aes-128-cbc', $sakura_privkey, 0, $iv);
-            
+
             // 将初始化向量和加密数据一起编码
             $encrypted = urlencode(base64_encode($iv . $encrypted));
-            
+
             return '<img src="' . rest_url("sakura/v1/qqinfo/avatar") . '?qq=' . $encrypted . '" class="lazyload avatar avatar-24 photo" alt="😀" width="24" height="24" onerror="imgError(this,1)">';
         } else {
             // Handle the case where $sakura_privkey is not set or is null
@@ -2444,7 +2442,6 @@ function change_avatar($avatar)
     }
     return $avatar;
 }
-
 //生成随机链接，防止浏览器缓存策略
 function get_random_url(string $url): string
 {
@@ -4524,3 +4521,19 @@ function iro_action_operator()
 }
 iro_action_operator();
 
+
+/* * 检查并生成加密密钥
+ * 如果不存在，则生成一个新的256位密钥并存储在选项中
+ */
+// 检查密钥是否存在，如果不存在则生成并存储
+if (!get_option('sakura_encryption_key')) {
+    // 生成一个安全的 128-bit (16字节) 密钥，适用于 AES-128-CBC
+    $new_key = bin2hex(random_bytes(16)); // 或者使用 openssl_random_pseudo_bytes(16)
+    update_option('sakura_encryption_key', $new_key, false); // 'false' 表示不自动加载
+}
+
+// 在 init 钩子中设置全局变量
+add_action('init', function() {
+    global $sakura_privkey;
+    $sakura_privkey = get_option('sakura_encryption_key');
+});
