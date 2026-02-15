@@ -92,6 +92,61 @@ class IpLocation
             }
         }
     }
+    
+    /**
+     * 通过 Nsuuu 接口获取IP地理位置
+     * 接口文档：https://v1.nsuuu.com/api/ipip
+     * * @return boolean 成功返回true，失败返回false
+     */
+    private function getIpLocationByNsuuu()
+    {
+        if (empty($this->ip)) {
+            return false;
+        }
+
+        // 获取API Key
+        $apiKey = function_exists('iro_opt') ? iro_opt('qq_avatar_api_key') : '';
+
+        if (empty($apiKey)) {
+            trigger_error('通过Nsuuu获取IP地理位置失败：未配置API Key', E_USER_WARNING);
+            return false;
+        }
+
+        // 构造请求URL (key放入query参数中)
+        $url = "https://v1.nsuuu.com/api/ipip?ip={$this->ip}&key={$apiKey}";
+        
+        $response = wp_remote_get($url, array('sslverify' => false)); // 视服务器情况，有时需要关闭ssl验证
+
+        if (is_wp_error($response)) {
+            $errorMessage = $response->get_error_message();
+            trigger_error('通过Nsuuu获取IP地理位置失败：' . $errorMessage, E_USER_WARNING);
+            return false;
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+
+        if (empty($data)) {
+            trigger_error('通过Nsuuu获取IP地理位置失败：返回数据为空或非JSON', E_USER_WARNING);
+            return false;
+        }
+
+        // 检查返回码 Code 200 为成功
+        if (isset($data['code']) && $data['code'] == 200 && isset($data['data'])) {
+            $info = $data['data'];
+            
+            // 映射字段
+            $this->country = isset($info['country']) ? $info['country'] : '';
+            $this->region  = isset($info['province']) ? $info['province'] : ''; // Nsuuu返回的是province
+            $this->city    = isset($info['city']) ? $info['city'] : '';
+            
+            return true;
+        } else {
+            $msg = isset($data['message']) ? $data['message'] : '未知错误';
+            trigger_error("通过Nsuuu获取IP地理位置失败：API返回错误 - $msg", E_USER_WARNING);
+            return false;
+        }
+    }
 
     /**
      * 输出地理位置信息
@@ -160,14 +215,28 @@ class IpLocation
             trigger_error('获取IP地理位置失败：不是有效的IP地址', E_USER_WARNING);
             return false;
         }
+        
+        $api_service = 'nsuuu';
+        
+        $result = false;
+        
+        if ($api_service === 'nsuuu') {
+            $result = $this->getIpLocationByNsuuu();
+        } else {
+            // 默认为 ip-api
+            $result = $this->getIpLocationByIpApi();
+        }
 
-        $this->getIpLocationByIpApi();
+        if (!$result) {
+            // 如果首选接口失败，直接返回失败
+            return false;
+        }
         
         $data = $this->outputLocation();
         if ($this->checkCompleteness($data)) {
             return $data;
         } else {
-            trigger_error('获取IP地理位置失败', E_USER_WARNING);
+            trigger_error('获取IP地理位置失败：数据不完整', E_USER_WARNING);
             return false;
         }
     }
